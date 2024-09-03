@@ -8,15 +8,16 @@ void st7920_set_psb(st7920_t *d, uint8_t val); //always low
 void st7920_set_rs(st7920_t *d, uint8_t val); //always high
 void st7920_set_sclk(st7920_t *d, uint8_t val);
 void st7920_set_sid(st7920_t *d, uint8_t val);
-#define delay_us STM32_DELAY_US
-#define delay_ms STM32_DELAY_MS
+#define delay_us swspi_hal_delay_us
+#define delay_ms swspi_hal_delay_ms
 
-void st7920_init(st7920_t *d, spi_gpio_t *rs, spi_gpio_t *psb) {
-	if(rs) d->rs = *rs;
-	if(psb) d->psb = *psb;
-	if(rs) st7920_set_rs(d, 1); //LCD_RS_1;  //CSһֱ���ߣ�ʹ��Һ������ֱ�ӽ�VCC��
-	if(psb) st7920_set_psb(d, 0); //LCD_PSB_0; //һֱ���ͣ��ô��ڷ�ʽ���� ����ֱ�ӽӵأ�
-
+void st7920_init(st7920_t *d, swspi_t *spi, spi_gpio_t *rs, spi_gpio_t *psb) {
+	if(spi) d->pDev = spi; else d->pDev = NULL;
+	if(rs) d->rs = rs; else d->rs = NULL;
+	if(psb) d->psb = psb; else d->psb = NULL;
+	if(rs) { swspi_setgpmode(rs, 1); st7920_set_rs(d, 0); } //LCD_RS_1;  //CSһֱ���ߣ�ʹ��Һ������ֱ�ӽ�VCC��
+	if(psb) { swspi_setgpmode(psb, 1); st7920_set_psb(d, 0); } //LCD_PSB_0; //һֱ���ͣ��ô��ڷ�ʽ���� ����ֱ�ӽӵأ�
+	delay_ms(40);
 	st7920_cmd(d, 0x30);
 	delay_ms(10);
 	st7920_cmd(d, 0x01);
@@ -45,23 +46,43 @@ void st7920_serialwrite(st7920_t *d, uint8_t Dbyte) {
 		 st7920_set_sclk(d, 0); //LCD_SCLK_0;
 		 Dbyte<<=1;
      }
-#endif
+#else
      swspi_write(d->pDev, &Dbyte, 1);
+#endif
 }
+
 void st7920_cmd(st7920_t *d, uint8_t Cbyte) {
+#if 0
 	st7920_set_rs(d, 1); //LCD_RS_1;
 	st7920_serialwrite(d, 0xf8);              //11111,RW(0),RS(0),0
 	st7920_serialwrite(d, 0xf0&Cbyte);
 	st7920_serialwrite(d, 0xf0&Cbyte<<4);
 	st7920_set_rs(d, 0); //LCD_RS_0;
+#else
+	uint8_t cmd[4] = { 0xf8, 0xf0, 0xf0, 0};
+	cmd[1] &= Cbyte;
+	cmd[2] &= Cbyte << 4;
+	st7920_set_rs(d, 1); //LCD_RS_1;
+	swspi_write(d->pDev, cmd, 3);
+	st7920_set_rs(d, 0); //LCD_RS_0;
+#endif
 }
 
 void st7920_data(st7920_t *d, uint8_t Dbyte ) {
+#if 0
 	st7920_set_rs(d, 1); //LCD_RS_1;
 	st7920_serialwrite(d, 0xfa);              //11111,RW(0),RS(1),0
 	st7920_serialwrite(d, 0xf0&Dbyte);
 	st7920_serialwrite(d, 0xf0&Dbyte<<4);
 	st7920_set_rs(d, 0); //LCD_RS_0;
+#else
+	uint8_t cmd[4] = { 0xfa, 0xf0, 0xf0, 0};
+	cmd[1] &= Dbyte;
+	cmd[2] &= Dbyte << 4;
+	st7920_set_rs(d, 1); //LCD_RS_1;
+	swspi_write(d->pDev, cmd, 3);
+	st7920_set_rs(d, 0); //LCD_RS_0;
+#endif
 }
 
 void st7920_cursor(st7920_t *d, uint8_t x, uint8_t y) {
@@ -76,10 +97,10 @@ void st7920_cursor(st7920_t *d, uint8_t x, uint8_t y) {
 	st7920_cmd(d, k);
 }
 
-void st7920_string(st7920_t *d,uint8_t x,uint8_t y,uint8_t *s) {
+void st7920_string(st7920_t *d,uint8_t x,uint8_t y,char *s) {
 	st7920_cmd(d, 0x30); //�����׼ģʽ
-	st7920_cursor(d, x,y);
-	while(*s) { st7920_data(d, *s); s++; }
+	st7920_cursor(d,x,y);
+	while(*s) { st7920_data(d, (uint8_t)*s); s++; }
 	st7920_cmd(d, 0x36); //����ͼ��ģʽ
 }
 
@@ -101,16 +122,16 @@ void st7920_fill(st7920_t *d, uint8_t color) { //�������RAM
 
 #ifdef USE_HAL_DRIVER //for STM32
 void st7920_set_psb(st7920_t *d, uint8_t val) {
-	if(! d->psb.port) return;
+	if(! d->psb->port) return;
 	//if(val != 0)	d->pDev->hal_io_ctl(IOCTL_SWSPI_SET_GPIO_LOW, &d->psb);
 	//else			d->pDev->hal_io_ctl(IOCTL_SWSPI_SET_GPIO_HIGH, &d->psb);
-	swspi_setgpo(&d->psb, val);
+	swspi_setgpo(d->psb, val);
 } //always low
 void st7920_set_rs(st7920_t *d, uint8_t val) {
-	if(! d->rs.port) return;
+	if(! d->rs->port) return;
 	//if(val != 0)	d->pDev->hal_io_ctl(IOCTL_SWSPI_SET_GPIO_LOW, &d->rs);
 	//else			d->pDev->hal_io_ctl(IOCTL_SWSPI_SET_GPIO_HIGH, &d->rs);
-	swspi_setgpo(&d->rs, val);
+	swspi_setgpo(d->rs, val);
 } //always high
 void st7920_set_sclk(st7920_t *d, uint8_t val) {
 	//if(val != 0)	d->pDev->hal_io_ctl(IOCTL_SWSPI_SET_GPIO_LOW, &d->clk);

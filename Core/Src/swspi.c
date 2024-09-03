@@ -36,9 +36,10 @@ void swspi_setbits(swspi_t *d, uint8_t val) { if(val>0) d->bitmask = 1 << (val-1
 //void delay_def(swspi_t *d) { d->hal_io_ctl(IOCTL_SWSPI_DELAY_US, &d->Delay_Time); }
 //uint8_t swspi_getMISO(swspi_t *d) { return d->hal_io_ctl(IOCTL_SWSPI_GET_GPIO_LEVEL, &d->MISO); }
 
-uint16_t swspi_rw2(swspi_t *d, uint16_t word) {
-    uint16_t data = 0;
+uint16_t swspi_rw2(swspi_t *d, uint16_t val) { //not support cpol & cpha yet.
+    uint16_t res = 0;
     uint16_t i = d->bitmask;
+#if 0
     for (; i!=0; i>>=1) {
     	//swspi_clrCLK(d);
     	swspi_hal_gpio_out(&d->CLK, 0);
@@ -46,57 +47,87 @@ uint16_t swspi_rw2(swspi_t *d, uint16_t word) {
     	swspi_delay_us(d->Delay_Time);
     	//if(word & i) swspi_setMOSI(d);
     	//else swspi_clrMOSI(d);
-    	swspi_hal_gpio_out(&d->MOSI, (word&i)?1:0);
+    	swspi_hal_gpio_out(&d->MOSI, (val&i)?1:0);
         //delay_def(d);
     	swspi_delay_us(d->Delay_Time);
-        data <<= 1;
+        res <<= 1;
         //swspi_setCLK(d);
         swspi_hal_gpio_out(&d->CLK, 1);
         //delay_def(d);
         swspi_delay_us(d->Delay_Time);
         //data |= swspi_getMISO(d);
-        data |= swspi_hal_gpio_in(&d->MISO);
+        res |= swspi_hal_gpio_in(&d->MISO);
         //delay_def(d);
         swspi_delay_us(d->Delay_Time);
     }
-    return data;
+#else
+    swspi_hal_gpio_out(&d->CLK, d->cpol);
+	for(res = 0; i!=0; i>>=1) {
+		if(!d->cpha) {
+			swspi_hal_gpio_out(&d->MOSI, (val&i)?1:0);
+			swspi_delay_us(d->Delay_Time); }
+
+		swspi_hal_gpio_out(&d->CLK, d->cpol);
+		swspi_delay_us(d->Delay_Time);
+
+		res <<= 1;
+		if(!d->cpha) {
+			res |= swspi_hal_gpio_in(&d->MISO);
+			swspi_delay_us(d->Delay_Time); }
+		else {
+			swspi_hal_gpio_out(&d->MOSI, (val&i)?1:0);
+			swspi_delay_us(d->Delay_Time); }
+
+		swspi_hal_gpio_out(&d->CLK, 1 ^ d->cpol);
+		swspi_delay_us(d->Delay_Time);
+
+		if(d->cpha) {
+			res |= swspi_hal_gpio_in(&d->MISO);
+			swspi_delay_us(d->Delay_Time); }
+
+	}
+	swspi_hal_gpio_out(&d->CLK, d->cpol);
+#endif
+    return res;
 }
 
 void __swspi_write(swspi_t *d, uint16_t val) {
 	uint16_t i;
 	if(!d) return;
 	i = d->bitmask;
+	swspi_hal_gpio_out(&d->CLK, d->cpol);
 	for(; i!=0; i>>=1) {
-		//swspi_clrCLK(d);
-		swspi_hal_gpio_out(&d->CLK, d->cpol ^ 0);
-		//delay_def(d);
+		if(!d->cpha) {
+			swspi_hal_gpio_out(&d->MOSI, (val&i)?1:0);
+			swspi_delay_us(d->Delay_Time); }
+
+		swspi_hal_gpio_out(&d->CLK, d->cpol);
 		swspi_delay_us(d->Delay_Time);
-		//if(val & i) swspi_setMOSI(d);
-		//else swspi_clrMOSI(d);
-		swspi_hal_gpio_out(&d->MOSI, ((val&i)?1:0) ^ d->cpha);
-		//delay_def(d);
-		swspi_delay_us(d->Delay_Time);
-		//swspi_setCLK(d);
+
+		if(d->cpha) {
+			swspi_hal_gpio_out(&d->MOSI, (val&i)?1:0);
+			swspi_delay_us(d->Delay_Time); }
+
 		swspi_hal_gpio_out(&d->CLK, 1 ^ d->cpol);
-		//delay_def(d);
 		swspi_delay_us(d->Delay_Time);
 	}
-	//swspi_clrMOSI(d);
-	swspi_hal_gpio_out(&d->MOSI, 1 ^ d->cpol);
+	swspi_hal_gpio_out(&d->CLK, d->cpol);
 }
 
-uint16_t __swspi_read(swspi_t *d) {
+uint16_t __swspi_read(swspi_t *d) { //not support cpol & cpha yet.
 	uint16_t i, res;
 	if(!d) return 0;
 	i = d->bitmask;
+	swspi_hal_gpio_out(&d->CLK, d->cpol);
+#if 0
 	for(res = 0; i!=0; i>>=1) {
 		//swspi_clrCLK(d);
-		swspi_hal_gpio_out(&d->CLK, 0);
+		swspi_hal_gpio_out(&d->CLK, 0 ^ d->cpol);
 		//delay_def(d);
 		swspi_delay_us(d->Delay_Time);
         res <<= 1;
         //swspi_setCLK(d);
-        swspi_hal_gpio_out(&d->CLK, 1);
+        swspi_hal_gpio_out(&d->CLK, 1 ^ d->cpol);
         //delay_def(d);
         swspi_delay_us(d->Delay_Time);
         //res |= swspi_getMISO(d) ? 1 : 0;
@@ -104,6 +135,25 @@ uint16_t __swspi_read(swspi_t *d) {
         //delay_def(d);
         swspi_delay_us(d->Delay_Time);
 	}
+#else
+	for(res = 0; i!=0; i>>=1) {
+		swspi_hal_gpio_out(&d->CLK, d->cpol);
+		swspi_delay_us(d->Delay_Time);
+
+		res <<= 1;
+		if(!d->cpha) {
+			res |= swspi_hal_gpio_in(&d->MISO);
+			swspi_delay_us(d->Delay_Time); }
+
+		swspi_hal_gpio_out(&d->CLK, 1 ^ d->cpol);
+		swspi_delay_us(d->Delay_Time);
+
+		if(d->cpha) {
+			res |= swspi_hal_gpio_in(&d->MISO);
+			swspi_delay_us(d->Delay_Time); }
+	}
+#endif
+	swspi_hal_gpio_out(&d->CLK, d->cpol);
 	return res;
 }
 
@@ -161,3 +211,7 @@ uint8_t swspi_getgpi(spi_gpio_t *gpiogrp) {
 	if(!gpiogrp->port || gpiogrp->pin==65535) return 0;
 	return swspi_hal_gpio_in(gpiogrp);
 }
+
+void swspi_setgpmode(spi_gpio_t *gpiogrp, uint8_t val) { swspi_hal_gpio_mode(gpiogrp, val); }
+void swspi_setcpol(swspi_t *d, uint8_t val) { swspi_hal_setcpol(d, val); }
+void swspi_setcpha(swspi_t *d, uint8_t val) { swspi_hal_setcpha(d, val); }

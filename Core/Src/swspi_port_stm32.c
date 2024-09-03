@@ -78,7 +78,7 @@ void swspi_hal_gpio_mode(spi_gpio_t *d, uint8_t val) {
     if(val!=0) { // 1=output, 0=input
 		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-		GPIO_InitStruct.Pull = GPIO_PULLUP;
+		GPIO_InitStruct.Pull = GPIO_NOPULL;
 		GPIO_InitStruct.Pin = d->pin;
     } else {
         GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -102,20 +102,39 @@ int swspi_hal_transmit_receive(void *hWND, uint8_t *pRead, uint8_t *pWrite, uint
 
 void swspi_hal_init(swspi_t *d, spi_gpio_t *clk, spi_gpio_t *mosi, spi_gpio_t *miso) {
     //d->hal_io_ctl = swspi_port_io_ctl;
-    if(d->bitmask == 0) { // h/w spi
+    //if(d->bitmask == 0) { // h/w spi
+    if(d->Delay_Time == 0) { // h/w spi
     	d->CLK.port = (void*)clk; d->CLK.pin = 65535;
     } else { // s/w spi
     	if(clk) {
     		d->CLK.port = clk->port; d->CLK.pin = clk->pin;
     		swspi_hal_gpio_mode(&d->CLK, 1);
+		//swspi_hal_gpio_out(&d->CLK, d->cpol);
     	}
     	if(mosi) {
     		d->MOSI.port = mosi->port; d->MOSI.pin = mosi->pin;
     		swspi_hal_gpio_mode(&d->MOSI, 1);
+		//swspi_hal_gpio_out(&d->MOSI, d->cpha);
     	}
     	if(miso) {
     		d->MISO.port = miso->port; d->MISO.pin = miso->pin;
     		swspi_hal_gpio_mode(&d->MISO, 0);
     	}
     }
+}
+
+void swspi_hal_setcpol(swspi_t *d, uint8_t val) {
+	val = (val==0) ? 0 : 1;
+	if(d->bitmask == 0) {
+		((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 &= ~ SPI_CR1_CPOL_Msk;
+		((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 |= val << SPI_CR1_CPOL_Pos;
+	} else { d->cpol = val; }
+}
+
+void swspi_hal_setcpha(swspi_t *d, uint8_t val) {
+	val = (val==0) ? 0 : 1;
+	if(d->bitmask == 0) {
+		((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 &= ~ SPI_CR1_CPHA_Msk;
+		((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 |= val << SPI_CR1_CPHA_Pos;
+	} else { d->cpha = val; }
 }

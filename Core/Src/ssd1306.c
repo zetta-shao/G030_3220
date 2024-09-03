@@ -426,7 +426,7 @@ char ssd1306_WriteChar(struct tSSD1306 *d, char ch, FontDef Font, SSD1306_COLOR 
 }
 
 char ssd1306_WriteChar2(struct tSSD1306 *d, char ch, FontDef Font, SSD1306_COLOR color) {
-    uint32_t i, b, j;
+    uint32_t i, j;
 
     if (ch < 32 || ch > 126) return 0;
     if (SSD1306_WIDTH < (d->CurrentX + Font.FontWidth) ||
