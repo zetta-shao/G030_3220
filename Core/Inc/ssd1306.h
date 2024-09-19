@@ -56,7 +56,7 @@ extern "C" {
 
 #define SPI_3PIN 1
 
-#include "ssd1306_fonts.h"
+#include "lcd_fonts.h"
 
 /* vvv I2C config vvv */
 
@@ -112,9 +112,8 @@ typedef enum {
 
 // Struct to store transformations
 typedef struct tSSD1306 {
-	uint16_t 	CurrentX;
-	uint16_t 	CurrentY;
-	uint8_t 	flag;
+	lcddev_t	d;
+	uint8_t		hwflag;
 	uint8_t		i2c_addr;
 	ssd1306_gpio_t	DC;
 	ssd1306_gpio_t	CS;
@@ -165,10 +164,11 @@ void SSD1306_gpioinit5W2(struct tSSD1306 *d, ssd1306_gpio_t *CS, ssd1306_gpio_t 
 void SSD1306_gpioinit4W2(struct tSSD1306 *d, ssd1306_gpio_t *CS, ssd1306_gpio_t *DC);
 //void SSD1306_gpioinit3W(struct tSSD1306 *d, void* CSport, uint16_t CSpin);
 void SSD1306_gpioinit3W2(struct tSSD1306 *d, ssd1306_gpio_t *CS);
-void SSD1306_Init(struct tSSD1306 *d, void *pvport);
+void SSD1306_init(struct tSSD1306 *d, void *pvport, void *pvFontDef);
 void SH1106_Init(struct tSSD1306 *d, void *pvport);
 void ssd1306_Fill(struct tSSD1306 *d, SSD1306_COLOR color);
 void ssd1306_UpdateScreen(struct tSSD1306 *d);
+void ssd1306_update(lcddev_t *d);
 void ssd1306_DrawPixel(struct tSSD1306 *d, uint8_t x, uint8_t y, SSD1306_COLOR color);
 char ssd1306_WriteChar(struct tSSD1306 *d, char ch, FontDef Font, SSD1306_COLOR color);
 char ssd1306_WriteString(struct tSSD1306 *d, char* str, FontDef Font, SSD1306_COLOR color);

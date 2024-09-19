@@ -3,12 +3,13 @@
 #include "gpiodef.h"
 #include "swi2c.h"
 #include "swspi.h"
-#include "ssd1306.h"
-#include "lcd1602sw.h"
 #include "INA3221.h"
 #include "IP2365.h"
 #include "sw35xx_s.h"
 #include "ath20.h"
+#include "lcd_fonts.h"
+#include "ssd1306.h"
+#include "lcd1602sw.h"
 #include "st7920.h"
 
 I2C_HandleTypeDef hi2c1;
@@ -34,47 +35,54 @@ stm32_gpio_t lcd_rs = { GPIOA, GPIO_PIN_6 }; //13
 stm32_gpio_t lcd_rs2 = { GPIOA, GPIO_PIN_0 }; //7
 stm32_gpio_t lcd_mosi = { GPIOA, GPIO_PIN_1 }; //8
 stm32_gpio_t lcd_clk = { GPIOA, GPIO_PIN_2 }; //9
+int32_t wV[3], wI[3];
 
 #define deffont Font_5x8
 
 #ifdef  USE_FULL_ASSERT
 void assert_failed(uint8_t *file, uint32_t line) { }
 #endif /* USE_FULL_ASSERT */
-void update_ina3221(INA3221_t *ina, SSD1306_t *led) {
-	  char str[64];
-	  int32_t wV,wI;
 
-	  if(ina->pDev == NULL) {
-		  ssd1306_SetCursor(led, 1, 16);
-		  ssd1306_WriteString(led, "no INA3221 delect", deffont, 1);
-		  return;
-	  }
+__strfmt str_fmt = &str_3digitL;
 
-	  //wV = ina3221_getVol_mV(ina, 1); //mV
-	  wV = ina3221_getAvgVol(ina, 1);
-	  //wI = ina3221_getCur_mA(ina, 1);
-	  wI = ina3221_getAvgCur(ina, 1);
-	  sprintf(str, "1:%4ldmV %4ldmA    ", wV, wI);
-	  //ssd1306_SetCursor(led, 1, 16);
-	  //ssd1306_WriteString(led, str, deffont, 1);
+void update_ina3221(INA3221_t *ina, void *display) {
+	int8_t np;
+	int32_t p, i;
+	char str[64];
+	lcddev_t *d = (lcddev_t *)display;
+	int ypos[3] = { 8, 24, 40 };
 
-	  wV = ina3221_getAvgVol(ina, 2);
-	  wI = ina3221_getAvgCur(ina, 2);
-	  sprintf(str, "2:%4ldmV %4ldmA    ", wV, wI);
-	  //ssd1306_SetCursor(led, 1, 24);
-	  //ssd1306_WriteString(led, str, deffont, 1);
+	if(ina->pDev == NULL) {
+		fontdraw_setpos(d, 0, 0);
+		fontdraw_string(d, "no INA3221 delect    ");
+		d->update(d);
+		return;
+	}
 
-	  wV = ina3221_getAvgVol(ina, 3);
-	  wI = ina3221_getAvgCur(ina, 3);
-	  sprintf(str, "3:%4ldmV %4ldmA    ", wV, wI);
-	  //ssd1306_SetCursor(led, 1, 32);
-	  //ssd1306_WriteString(led, str, deffont, 1);
+	for(i=0; i<3; i++) {
+		sprintf(str, "%1ld:", i+1);
+		fontdraw_setpos(d, 0, ypos[i]);
+		fontdraw_stringFont(d, str, 1, &Font_8x16);
 
-	  //ssd1306_UpdateScreen(led);
+		np = str_fmt(wV[i], str);
+		fontdraw_setpos(d, 16, ypos[i]);
+		fontdraw_stringFont(d, str, np, &Font_8x16);
+
+		np = str_fmt(wI[i], str);
+		fontdraw_setpos(d, 56, ypos[i]);
+		fontdraw_stringFont(d, str, np, &Font_8x16);
+
+		p = (wV[i] * wI[i]) / 1000;
+		np = str_fmt(p, str);
+		fontdraw_setpos(d, 96, ypos[i]);
+		fontdraw_stringFont(d, str, np, &Font_8x16);
+	}
+	d->update(d);
 }
 #define ADV_VREF_PREAMP (4096 * 1210)
+#define ADV_VREF_PREAMP (4096 * 1210)
 
-void init_adc(ADC_HandleTypeDef *d, SSD1306_t *led) {
+void init_adc(ADC_HandleTypeDef *d) {
 	uint32_t idx, res = 0;
 	ADC_ChannelConfTypeDef sConfig = {0};
 
@@ -97,28 +105,10 @@ void init_adc(ADC_HandleTypeDef *d, SSD1306_t *led) {
 	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) { Error_Handler(); }
 }
 
-void update_adc(ADC_HandleTypeDef *d, SSD1306_t *led) {
+void update_adc(ADC_HandleTypeDef *d, lcddev_t *plcd) {
 	char str[64];
 	uint32_t res, idx;
-	//ADC_ChannelConfTypeDef sConfig = {0};
-	init_adc(d, led);
-	//sConfig.Channel = ADC_CHANNEL_VREFINT;
-	//sConfig.Rank = ADC_REGULAR_RANK_1;
-	//sConfig.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
-	//HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-
-	//HAL_ADC_Start(d);
-	//for(res=0,idx=0; idx<4; idx++) {
-	//	HAL_ADC_PollForConversion(d, 1); //wsit for 1mS
-	//	res += HAL_ADC_GetValue(d);
-	//}
-	//HAL_ADC_Stop(d);
-	//res >>= 2;
-
-	sprintf(str, "chip_vref %ld %d    ", vref, _val_);
-
-	//sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
-	//HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+	init_adc(d);
 
 	HAL_ADC_Start(d);
 	HAL_ADC_PollForConversion(d, 1); //wsit for 1mS
@@ -126,64 +116,51 @@ void update_adc(ADC_HandleTypeDef *d, SSD1306_t *led) {
 	HAL_ADC_Stop(d);
 	idx = __LL_ADC_CALC_TEMPERATURE(vref, res, LL_ADC_RESOLUTION_12B);
 
-	sprintf(str, "chip_temp %ld %ld    ", idx, res);
+	fontdraw_setpos(plcd, 0, plcd->frameHeight - plcd->pFont->FontHeight);
+	sprintf(str, "coretemp:%ld   ", idx);
+	fontdraw_string(plcd, str);
 }
 
 int main(void) {
+	lcddev_t *plcd = &lcd128.d;
 	HAL_Init();
 	GPIOinit();
 	swi2c_HWinit(&si2c1, &hi2c1);
-	swi2c_HWinit(&si2c2, &hi2c2);
+	//swi2c_HWinit(&si2c2, &hi2c2);
 
-	//ina3221_begin(&ina3221, &si2c1);
+	ina3221_begin(&ina3221, &si2c1);
 	HAL_ADCEx_Calibration_Start(&hadc1);
+	init_adc(&hadc1);
 	HAL_Delay(50);
 
-	swspi_SWinit(&sspi2, &lcd_clk, &lcd_mosi, NULL);
-	swspi_setcpol(&sspi2, 1);
-	swspi_setcpha(&sspi2, 1);
-
-	//swspi_setbits(&sspi2, 8);
-	st7920_init(&lcd129, &sspi2, &lcd_rs2, NULL);
-#if 1
-  {
-	char str[64]; //, vtg[8], cit[8];
-	  //float fvalv, fvali;
-	//uint16_t wV = ina3221_getDieID(&ina3221);
-	//uint16_t wI = ina3221_getManufID(&ina3221);
-	//sprintf(str, "INA:%04x:%04x", wV, wI);
-	sprintf(str, "INA:%04x:%04x", 0, 0);
-	//st7920_string(&lcd129, 0, 0, str);
-	st7920_string(&lcd129, 1, 0, "--1--");
+	//swspi_SWinit(&sspi2, &lcd_clk, &lcd_mosi, NULL);
+	//swspi_setcpol(&sspi2, 1);
+	//swspi_setcpha(&sspi2, 1);
 	swspi_HWinit(&sspi1, &hspi1);
-	swspi_setcpol(&sspi1, 1);
-	swspi_setcpha(&sspi1, 1);
+	//swspi_setmode(&sspi1, 3);
 
-	HAL_Delay(1000);
-	st7920_string(&lcd129, 2, 0, "--2--");
-	st7920_init(&lcd128, &sspi1, &lcd_rs, NULL);
+	//st7920_init(&lcd128, &sspi1, &lcd_rs, NULL);
+	//st7920_string(&lcd128, 0, 0, "ch Vol  Cur  Wat");	
+	st7920_init(&lcd128, &sspi1, &lcd_rs, &Font_6x8);
+	fontdraw_setpos(plcd, 0, 0);
+	fontdraw_string(plcd, "ch ");
+	fontdraw_setpos(plcd, 24, 0);
+	fontdraw_string(plcd, "Vol ");
+	fontdraw_setpos(plcd, 64, 0);
+	fontdraw_string(plcd, "Cur ");
+	fontdraw_setpos(plcd, 104, 0);
+	fontdraw_string(plcd, "Wat ");
+	//plcd->update(plcd);
 
-	HAL_Delay(1000);
-	st7920_string(&lcd129, 3, 0, "--3--");
-	st7920_string(&lcd128, 0, 0, str);
-
-  }
-#endif
   _val_ = 0;
   while (1) {
 	  //update_ina3221(&ina3221, &SD13061);
+	  update_ina3221(&ina3221, plcd);
 	  //update_sw3518(&SW35184, &SD13061);
-	  if(env_key1 > 0) { _val_++; env_key1--; }
-	  if(env_key2 > 0) { _val_--; env_key2--; }
-	  if(env_key3 > 0) { _val_=0; env_key3--; }
-	  //update_ath20(&ath20, &SD13061);
-	  //HAL_GPIO_WritePin(EVB_LED_P, EVB_LED, GPIO_PIN_SET);
-	  HAL_Delay(500);
-	  //update_ina3221(&ina3221, &SD13061);
-	  //update_sw3518(&SW35184, &SD13061);
-	  if(env_key1 > 0) { _val_++; env_key1--; }
-	  if(env_key2 > 0) { _val_--; env_key2--; }
-	  if(env_key3 > 0) { _val_=0; env_key3--; }
+	  update_adc(&hadc1, plcd);
+	  //if(env_key1 > 0) { _val_++; env_key1--; }
+	  //if(env_key2 > 0) { _val_--; env_key2--; }
+	  //if(env_key3 > 0) { _val_=0; env_key3--; }
 	  //update_ath20(&ath20, &SD13061);
 	  //HAL_GPIO_WritePin(EVB_LED_P, EVB_LED, GPIO_PIN_RESET);
 	  HAL_Delay(500);
@@ -192,10 +169,14 @@ int main(void) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         if(htim == &htim14) {
-                HAL_GPIO_TogglePin(EVB_LED_P, EVB_LED);
-                //HAL_GPIO_TogglePin(LCD_RSP, LCD_RS);
-		//st7920_init(&lcd128, &sspi1, &lcd_rs, NULL);
-		//st7920_string(&lcd128, 0, 1, "st7920 test");
+			HAL_GPIO_TogglePin(EVB_LED_P, EVB_LED);
+			//HAL_GPIO_TogglePin(LCD_RSP, LCD_RS);
+			wV[0] = ina3221_getAvgVol(&ina3221, 0);
+			wI[0] = ina3221_getAvgCur(&ina3221, 0);
+			wV[1] = ina3221_getAvgVol(&ina3221, 1);
+			wI[1] = ina3221_getAvgCur(&ina3221, 1);
+			wV[2] = ina3221_getAvgVol(&ina3221, 2);
+			wI[2] = ina3221_getAvgCur(&ina3221, 2);
         }
 }
 

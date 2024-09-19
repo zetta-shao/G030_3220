@@ -73,9 +73,9 @@ uint8_t ina3221_begin(struct t_INA3221 *d, struct tag_swi2c *pvDev) {
 	d->pDev = pvDev;
 	if(d->_i2c_addr == 0) d->_i2c_addr = default_i2caddr;
 	swi2c_dummy_clock(d->pDev);
-	d->_shuntRes[0] = 100; //100 mean 100mOhm.
-	d->_shuntRes[1] = 100;
-	d->_shuntRes[2] = 100;
+	d->_shuntRes[0] = 20; //100 mean 100mOhm.
+	d->_shuntRes[1] = 20;
+	d->_shuntRes[2] = 20;
 	d->_filterRes[0] = 0;
 	d->_filterRes[1] = 0;
 	d->_filterRes[2] = 0;
@@ -482,7 +482,6 @@ int16_t ina3221_getCur_mA(struct t_INA3221 *d, uint8_t channel) {
 	//	case INA3221_CH3: ina3221_read(d, INA3221_REG_CH3_SHUNTV, (uint16_t*)&val); break;
 	//}
 	val = ina3221_getShuntVolRaw(d, channel);
-	val >>= 3;
 	val += val << 2;
 	val /= d->_shuntRes[channel];
 	return val;
@@ -491,9 +490,9 @@ int16_t ina3221_getCur_mA(struct t_INA3221 *d, uint8_t channel) {
 int32_t ina3221_getAvgVol(struct t_INA3221 *d, uint8_t channel) {
 	struct tAvgVal *t;
 	int16_t wVol;
-	if(!d || !d->pDev || channel > 3 || channel < 1) return 0;
-	wVol = ina3221_getVol_Raw(d, channel) >> 3;
-	t = &(d->avg[channel  -1]);
+	if(!d || !d->pDev || channel > 2 || channel < 0) return 0;
+	wVol = ina3221_getVol_Raw(d, channel) >> 2;
+	t = &(d->avg[channel]);
 	t->VolAvg -= (int32_t)t->VolTab[t->vidx];
 	t->VolTab[t->vidx] = wVol;
 	t->VolAvg += (int32_t)wVol;
@@ -502,13 +501,20 @@ int32_t ina3221_getAvgVol(struct t_INA3221 *d, uint8_t channel) {
 	return (t->VolAvg >> ScaleShift);
 }
 
-int32_t ina3221_getAvgCur(struct t_INA3221 *d, uint8_t channel) {
+int32_t ina3221_getAvgCur(struct t_INA3221 *d, uint8_t channel) { //channel0-2
 	struct tAvgVal *t;
 	int16_t wCur;
-	if(!d || !d->pDev || channel > 3 || channel < 1) return 0;
+	if(!d || !d->pDev || channel > 2 || channel < 0) return 0;
 	//when shunt-res=0.04ohm, wCur=ina3221_getShuntVolRaw*5/40=ina3221_getShuntVolRaw/8
+#if use_shuntres
+	wCur = ina3221_getShuntVolRaw(d, channel);
+	wCur += wCur << 2;
+	wCur /= d->_shuntRes[channel];
+#else
+	//wCur = ina3221_getShuntVolRaw(d, channel) >> 3; //2 for 20mOhm, 3 for 40mOhm
 	wCur = ina3221_getShuntVolRaw(d, channel) >> 3;
-	t = &(d->avg[channel  -1]);
+#endif
+	t = &(d->avg[channel]);
 	t->CurAvg -= (int32_t)t->CurTab[t->cidx];
 	t->CurTab[t->cidx] = wCur;
 	t->CurAvg += (int32_t)wCur;

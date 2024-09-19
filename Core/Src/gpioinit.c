@@ -101,10 +101,10 @@ static void MX_SPI1_Init(void) {
   hspi1.Init.Direction = SPI_DIRECTION_1LINE;
   //hspi1.Init.DataSize = SPI_DATASIZE_9BIT;
   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW; //cpol=0
-  //hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH; //cpol=1
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE; //cpha=0
-  //hspi1.Init.CLKPhase = SPI_PHASE_2EDGE; //cpha=1
+  //hspi1.Init.CLKPolarity = SPI_POLARITY_LOW; //cpol=0
+  hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH; //cpol=1
+  //hspi1.Init.CLKPhase = SPI_PHASE_1EDGE; //cpha=0
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE; //cpha=1
   hspi1.Init.NSS = SPI_NSS_SOFT;
   hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
@@ -172,7 +172,7 @@ static void MX_TIM14_Init(void) {
   htim14.Instance = TIM14;
   htim14.Init.Prescaler = TIM14_PRESCALE;
   htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim14.Init.Period = 9999;
+  htim14.Init.Period = 249;
   htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim14) != HAL_OK) { Error_Handler(); }

@@ -25,9 +25,9 @@
     INA3221_CH_NUM
 } ina3221_ch_t;*/
 
-#define INA3221_CH1		1
-#define INA3221_CH2		2
-#define INA3221_CH3		3
+#define INA3221_CH1		0 //1
+#define INA3221_CH2		1 //2
+#define INA3221_CH3		2 //3
 #define INA3221_CH_NUM	3
 
 // Registers
@@ -157,8 +157,8 @@ typedef union {
 // got minimal resolution = 40 / (8/2) = 10uV. minimal current resolution is 10uV / 100mOhm = 0.0001(A)=0.1mA
 
 #define INA3221_AVGVAL 1
-#define VolTabNum 16
-#define CurTabNum 2
+#define VolTabNum 8
+#define CurTabNum 4
 #define ScaleShift 1 // div by 2
 
 typedef struct tAvgVal {
@@ -175,9 +175,9 @@ typedef struct t_INA3221 {
     // Value of Mask/Enable register.
 	masken_reg_t 	_masken_reg; //uint16_t
     // Shunt resistance in mOhm
-	uint32_t	_shuntRes[INA3221_CH_NUM];
+	int32_t	_shuntRes[INA3221_CH_NUM];
     // Series filter resistance in Ohm
-	uint32_t	_filterRes[INA3221_CH_NUM];
+	int32_t	_filterRes[INA3221_CH_NUM];
 	int32_t		voltage[3];
 	int32_t		curcuit[3];
 	int32_t		power[3];

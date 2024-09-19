@@ -100,7 +100,7 @@ int swspi_hal_transmit_receive(void *hWND, uint8_t *pRead, uint8_t *pWrite, uint
 	return HAL_SPI_TransmitReceive(hWND, pWrite, pRead, datasize, HAL_MAX_DELAY);
 }
 
-void swspi_hal_init(swspi_t *d, spi_gpio_t *clk, spi_gpio_t *mosi, spi_gpio_t *miso) {
+int swspi_hal_init(swspi_t *d, spi_gpio_t *clk, spi_gpio_t *mosi, spi_gpio_t *miso) {
     //d->hal_io_ctl = swspi_port_io_ctl;
     //if(d->bitmask == 0) { // h/w spi
     if(d->Delay_Time == 0) { // h/w spi
@@ -121,20 +121,17 @@ void swspi_hal_init(swspi_t *d, spi_gpio_t *clk, spi_gpio_t *mosi, spi_gpio_t *m
     		swspi_hal_gpio_mode(&d->MISO, 0);
     	}
     }
+    return 0;
 }
 
-void swspi_hal_setcpol(swspi_t *d, uint8_t val) {
-	val = (val==0) ? 0 : 1;
-	if(d->bitmask == 0) {
-		((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 &= ~ SPI_CR1_CPOL_Msk;
-		((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 |= val << SPI_CR1_CPOL_Pos;
-	} else { d->cpol = val; }
+
+int swspi_hal_setmode(swspi_t *d, uint8_t val) {
+	((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 &= ~ (SPI_CR1_CPHA_Msk|SPI_CR1_CPOL_Msk);
+	if(val & 1) ((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 |= val << SPI_CR1_CPOL_Pos;
+	if(val & 2) ((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 |= val << SPI_CR1_CPHA_Pos;
+	return 0;
 }
 
-void swspi_hal_setcpha(swspi_t *d, uint8_t val) {
-	val = (val==0) ? 0 : 1;
-	if(d->bitmask == 0) {
-		((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 &= ~ SPI_CR1_CPHA_Msk;
-		((SPI_HandleTypeDef *)d->CLK.port)->Instance->CR1 |= val << SPI_CR1_CPHA_Pos;
-	} else { d->cpha = val; }
-}
+int swspi_hal_setbits(swspi_t *d, uint8_t val) { (void)d; (void)val; return 0; } //too complex.
+
+void swspi_hal_spiclose(swspi_t *d) { (void)d; }

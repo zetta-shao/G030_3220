@@ -51,7 +51,7 @@ void ssd1306_WriteCommand(struct tSSD1306 *d, uint8_t byte) {
     HAL_GPIO_WritePin(d->CS_PORT, d->cs_pin, GPIO_PIN_SET); // un-select OLED
 #else
     swspi_setgpo(&d->CS, 0); // select OLED
-	if((d->flag & __OLED_3WSPI) != 0) { //must set SPI 9bit data mode first
+	if((d->hwflag & __OLED_3WSPI) != 0) { //must set SPI 9bit data mode first
 		pT[0] = byte;
 	    //HAL_SPI_Transmit(d->pDev, pT, 1, HAL_MAX_DELAY);
 	    swspi_write(d->pDev, pT, 1);
@@ -87,7 +87,7 @@ void ssd1306_WriteData(struct tSSD1306 *d, uint8_t* buffer, size_t buff_size) {
 #else
     swspi_setgpo(&d->CS, 0); // select OLED
     //HAL_GPIO_WritePin(d->CS_PORT, d->cs_pin, GPIO_PIN_RESET); // select OLED
-	if((d->flag & __OLED_3WSPI) != 0) { //must set SPI 9bit data mode first
+	if((d->hwflag & __OLED_3WSPI) != 0) { //must set SPI 9bit data mode first
 	    for(; buff_size>0; buff_size--, buffer++) {
 	    	pT[0] = *buffer;
 	    	//HAL_SPI_Transmit(d->pDev, pT, 1, HAL_MAX_DELAY);
@@ -144,10 +144,10 @@ void SSD1306_gpioinit5W2(struct tSSD1306 *d, ssd1306_gpio_t *CS, ssd1306_gpio_t 
 	d->CS.port=NULL; d->CS.pin=65535;
 	d->DC.port=NULL; d->DC.pin=65535;
 	d->RST.port=NULL; d->RST.pin=65535;
-	d->flag = 0;
+	d->hwflag = 0;
 	d->i2c_addr = 0x3c;
-	d->CurrentX = 0;
-	d->CurrentY = 0;
+	d->d.curX = 0;
+	d->d.curY = 0;
 	if(CS) { d->CS.port=CS->port; d->CS.pin=CS->pin; };
 	if(DC) { d->DC.port=DC->port; d->DC.pin=DC->pin; };
 	if(RST) { d->RST.port=RST->port; d->RST.pin=RST->pin; };
@@ -168,16 +168,29 @@ void SSD1306_gpioinit4W2(struct tSSD1306 *d, ssd1306_gpio_t *CS, ssd1306_gpio_t 
 
 void SSD1306_gpioinit3W2(struct tSSD1306 *d, ssd1306_gpio_t *CS) {
 	SSD1306_gpioinit5W2(d, CS, NULL, NULL);
-	d->flag |= __OLED_3WSPI;
+	d->hwflag |= __OLED_3WSPI;
 }
 
 /* Initialize the oled screen */
-void SSD1306_Init(struct tSSD1306 *d, void *pvport) {
+void SSD1306_init(struct tSSD1306 *d, void *pvport, void *pvFontDef) {
 #if defined(SSD1306_USE_I2C)
 	d->pDev = (swi2c_t*)pvport;
 #elif defined(SSD1306_USE_SPI)
 	d->pDev	= (swspi_t*)pvport;
 #endif
+    d->d.flags = (FONTDRAW_HEIGHTMUL | FONTDRAW_HEIGHTPREDIV | FONTDRAW_VERTICALDRAW);
+    d->d.frameWidth = 128;
+    d->d.frameHeight = 64;
+    d->d.heightScale = 4; //2^4 = 128(weight)/8
+    d->d.widthScale = 0;
+    d->d.posmask = 7;
+    d->d.invposmask = 0;
+    d->d.oneLineOffsetSize = 16;
+    d->d.pFrameBuf = d->SSD1306_Buffer;
+    if(pvFontDef) d->d.pFont = (struct FontDef*)pvFontDef;
+    d->d.color = 1;
+    d->d.update = ssd1306_update;
+    d->d.parent = d;
     // Reset OLED
     ssd1306_Reset(d);
     // Wait for the screen to boot
@@ -264,9 +277,9 @@ void SSD1306_Init(struct tSSD1306 *d, void *pvport) {
     ssd1306_UpdateScreen(d);
     
     // Set default values for screen object
-    d->CurrentX = 0;
-    d->CurrentY = 0;
-    d->flag |= __INITED;
+    d->d.curX = 0;
+    d->d.curY = 0;
+    d->hwflag |= __INITED;
 }
 void SH1106_Init(struct tSSD1306 *d, void *pvport) {
 #if defined(SSD1306_USE_I2C)
@@ -333,9 +346,9 @@ void SH1106_Init(struct tSSD1306 *d, void *pvport) {
     // Flush buffer to screen
     ssd1306_UpdateScreen(d);
     // Set default values for screen object
-    d->CurrentX = 0;
-    d->CurrentY = 0;
-    d->flag |= __INITED;
+    d->d.curX = 0;
+    d->d.curY = 0;
+    d->hwflag |= __INITED;
 }
 
 /* Fill the whole screen with the given color */
@@ -362,6 +375,19 @@ void ssd1306_UpdateScreen(struct tSSD1306 *d) {
         //ssd1306_WriteData(d, d->SSD1306_Buffer + (SSD1306_WIDTH*i), SSD1306_WIDTH);
         ssd1306_WriteData(d, pT, SSD1306_WIDTH);
         pT += SSD1306_WIDTH;
+    }
+}
+
+void ssd1306_update(lcddev_t *d) {
+	SSD1306_t *p = d->parent;
+	uint8_t *pT = d->pFrameBuf;
+    for(uint8_t i = 0; i < d->frameWidth/8; i++) {
+        ssd1306_WriteCommand(p, 0xB0 + i); // Set the current RAM page address.
+        ssd1306_WriteCommand(p, 0x00 + SSD1306_X_OFFSET_LOWER);
+        ssd1306_WriteCommand(p, 0x10 + SSD1306_X_OFFSET_UPPER);
+        //ssd1306_WriteData(d, d->SSD1306_Buffer + (SSD1306_WIDTH*i), SSD1306_WIDTH);
+        ssd1306_WriteData(p, pT, d->frameWidth);
+        pT += d->oneLineOffsetSize;
     }
 }
 
@@ -399,8 +425,8 @@ char ssd1306_WriteChar(struct tSSD1306 *d, char ch, FontDef Font, SSD1306_COLOR 
         return 0;
 
     // Check remaining space on current line
-    if (SSD1306_WIDTH < (d->CurrentX + Font.FontWidth) ||
-        SSD1306_HEIGHT < (d->CurrentY + Font.FontHeight))
+    if (SSD1306_WIDTH < (d->d.curX + Font.FontWidth) ||
+        SSD1306_HEIGHT < (d->d.curY + Font.FontHeight))
     {
         // Not enough space on current line
         return 0;
@@ -411,15 +437,15 @@ char ssd1306_WriteChar(struct tSSD1306 *d, char ch, FontDef Font, SSD1306_COLOR 
         b = Font.data[(ch - 32) * Font.FontHeight + i];
         for(j = 0; j < Font.FontWidth; j++) {
             if((b << j) & 0x8000)  {
-                ssd1306_DrawPixel(d, d->CurrentX + j, (d->CurrentY + i), (SSD1306_COLOR) color);
+                ssd1306_DrawPixel(d, d->d.curX + j, (d->d.curY + i), (SSD1306_COLOR) color);
             } else {
-                ssd1306_DrawPixel(d, d->CurrentX + j, (d->CurrentY + i), (SSD1306_COLOR)!color);
+                ssd1306_DrawPixel(d, d->d.curX + j, (d->d.curY + i), (SSD1306_COLOR)!color);
             }
         }
     }
 
     // The current space is now taken
-    d->CurrentX += Font.FontWidth;
+    d->d.curX += Font.FontWidth;
 
     // Return written char for validation
     return ch;
@@ -429,14 +455,14 @@ char ssd1306_WriteChar2(struct tSSD1306 *d, char ch, FontDef Font, SSD1306_COLOR
     uint32_t i, j;
 
     if (ch < 32 || ch > 126) return 0;
-    if (SSD1306_WIDTH < (d->CurrentX + Font.FontWidth) ||
-        SSD1306_HEIGHT < (d->CurrentY + Font.FontHeight)) { return 0; }
+    if (SSD1306_WIDTH < (d->d.curX + Font.FontWidth) ||
+        SSD1306_HEIGHT < (d->d.curY + Font.FontHeight)) { return 0; }
     if(Font.FontWidth <= 8) {
         uint8_t *px, m;
         px = ((uint8_t*)Font.data) + ((ch-32)*Font.FontWidth);
         for(i = 0; i < Font.FontWidth; i++, px++) {
             for(m=0x80,j=0; j<Font.FontHeight; j++, m>>=1) {
-                ssd1306_DrawPixel(d, d->CurrentX + i, (d->CurrentY + j), (*px & m) ? color : !color);
+                ssd1306_DrawPixel(d, d->d.curX + i, (d->d.curY + j), (*px & m) ? color : !color);
             }
         }
 
@@ -445,12 +471,12 @@ char ssd1306_WriteChar2(struct tSSD1306 *d, char ch, FontDef Font, SSD1306_COLOR
         px = (uint16_t*)Font.data + ((ch-32)*Font.FontHeight);
         for(i = 0; i < Font.FontHeight; i++, px++) {
             for(m=0x8000,j=0; j<Font.FontWidth; j++, m>>=1) {
-                ssd1306_DrawPixel(d, d->CurrentX + j, (d->CurrentY + i), (*px & m) ? color : !color);
+                ssd1306_DrawPixel(d, d->d.curX + j, (d->d.curY + i), (*px & m) ? color : !color);
             }
         }
     }
 
-    d->CurrentX += Font.FontWidth;
+    d->d.curX += Font.FontWidth;
     return ch;
 }
 
@@ -470,8 +496,8 @@ char ssd1306_WriteString(struct tSSD1306 *d, char* str, FontDef Font, SSD1306_CO
 
 /* Position the cursor */
 void ssd1306_SetCursor(struct tSSD1306 *d, uint8_t x, uint8_t y) {
-    d->CurrentX = x;
-    d->CurrentY = y;
+    d->d.curX = x;
+    d->d.curY = y;
 }
 
 /* Draw line by Bresenhem's algorithm */
@@ -751,14 +777,14 @@ void ssd1306_SetDisplayOn(struct tSSD1306 *d, const uint8_t on) {
     if (on) {
         value = 0xAF;   // Display on
         //d->DisplayOn = 1;
-        d->flag |= __DISPLAY_ON;
+        d->hwflag |= __DISPLAY_ON;
     } else {
         value = 0xAE;   // Display off
         //d->DisplayOn = 0;
-        d->flag &= ~__DISPLAY_ON;
+        d->hwflag &= ~__DISPLAY_ON;
     }
     ssd1306_WriteCommand(d, value);
 }
 
 //uint8_t ssd1306_GetDisplayOn(struct tSSD1306 *d) { return d->DisplayOn; }
-uint8_t ssd1306_GetDisplayOn(struct tSSD1306 *d) { return (d->flag & __DISPLAY_ON)?1:0; }
+uint8_t ssd1306_GetDisplayOn(struct tSSD1306 *d) { return (d->hwflag & __DISPLAY_ON)?1:0; }
