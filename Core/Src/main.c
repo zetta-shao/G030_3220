@@ -26,15 +26,15 @@ int8_t env_key3 = 0;
 int8_t _val_ = 0;
 swi2c_t si2c1={0}, si2c2={0};
 swspi_t sspi1={0};
-swspi_t sspi2={0};
+//swspi_t sspi2={0};
 //swspi_t sspi3={0};
 INA3221_t ina3221 = { 0 };
-st7920_t lcd128 = { 0 };
-st7920_t lcd129 = { 0 };
+//st7920_t lcd128 = { 0 };
+ssd1306_t lcd128 = { 0 };
+stm32_gpio_t lcd_cs = { GPIOA, GPIO_PIN_4 }; //11
 stm32_gpio_t lcd_rs = { GPIOA, GPIO_PIN_6 }; //13
-stm32_gpio_t lcd_rs2 = { GPIOA, GPIO_PIN_0 }; //7
-stm32_gpio_t lcd_mosi = { GPIOA, GPIO_PIN_1 }; //8
-stm32_gpio_t lcd_clk = { GPIOA, GPIO_PIN_2 }; //9
+//stm32_gpio_t lcd_mosi = { GPIOA, GPIO_PIN_1 }; //8
+//stm32_gpio_t lcd_clk = { GPIOA, GPIO_PIN_2 }; //9
 int32_t wV[3], wI[3];
 
 #define deffont Font_5x8
@@ -122,26 +122,24 @@ void update_adc(ADC_HandleTypeDef *d, lcddev_t *plcd) {
 }
 
 int main(void) {
-	lcddev_t *plcd = &lcd128.d;
+	lcddev_t *plcd;
 	HAL_Init();
 	GPIOinit();
 	swi2c_HWinit(&si2c1, &hi2c1);
 	//swi2c_HWinit(&si2c2, &hi2c2);
-
-	ina3221_begin(&ina3221, &si2c1);
-	HAL_ADCEx_Calibration_Start(&hadc1);
-	init_adc(&hadc1);
-	HAL_Delay(50);
-
-	//swspi_SWinit(&sspi2, &lcd_clk, &lcd_mosi, NULL);
-	//swspi_setcpol(&sspi2, 1);
-	//swspi_setcpha(&sspi2, 1);
 	swspi_HWinit(&sspi1, &hspi1);
+	//swspi_SWinit(&sspi2, &lcd_clk, &lcd_mosi, NULL);
 	//swspi_setmode(&sspi1, 3);
 
-	//st7920_init(&lcd128, &sspi1, &lcd_rs, NULL);
-	//st7920_string(&lcd128, 0, 0, "ch Vol  Cur  Wat");	
-	st7920_init(&lcd128, &sspi1, &lcd_rs, &Font_6x8);
+	HAL_Delay(50);
+	init_adc(&hadc1);
+	ina3221_begin(&ina3221, &si2c1);
+	HAL_ADCEx_Calibration_Start(&hadc1);
+
+	//st7920_init(&lcd128, &sspi1, NULL, &Font_6x8);
+	SSD1306_gpioinit4W2(&lcd128, &lcd_cs, &lcd_rs);
+	SSD1306_init(&lcd128, &sspi1, &Font_6x8);
+	plcd = &lcd128.d;
 	fontdraw_setpos(plcd, 0, 0);
 	fontdraw_string(plcd, "ch ");
 	fontdraw_setpos(plcd, 24, 0);
@@ -154,15 +152,8 @@ int main(void) {
 
   _val_ = 0;
   while (1) {
-	  //update_ina3221(&ina3221, &SD13061);
 	  update_ina3221(&ina3221, plcd);
-	  //update_sw3518(&SW35184, &SD13061);
 	  update_adc(&hadc1, plcd);
-	  //if(env_key1 > 0) { _val_++; env_key1--; }
-	  //if(env_key2 > 0) { _val_--; env_key2--; }
-	  //if(env_key3 > 0) { _val_=0; env_key3--; }
-	  //update_ath20(&ath20, &SD13061);
-	  //HAL_GPIO_WritePin(EVB_LED_P, EVB_LED, GPIO_PIN_RESET);
 	  HAL_Delay(500);
   }
 }
@@ -181,9 +172,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 
 void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin) {
-	switch(GPIO_Pin) {
+	/*switch(GPIO_Pin) { //4-15
 	case GPIO_PIN_13: env_key1=1; break;
 	case GPIO_PIN_14: env_key2=1; break;
 	case GPIO_PIN_15: env_key3=1; break;
-	}
+	}*/
 }

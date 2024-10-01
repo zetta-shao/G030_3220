@@ -126,19 +126,10 @@ typedef struct tSSD1306 {
 	//struct __SPI_HandleTypeDef *pDev;
 	swspi_t		*pDev;
 #endif
-	//void*		DC_PORT;
-	//void*		CS_PORT;
-	//void*		RST_PORT;
-	//void*		CLK_PORT;
-	//void*		DATA_PORT;
-	//uint16_t	dc_pin;
-	//uint16_t	cs_pin;
-	//uint16_t	rst_pin;
-	//uint16_t	clk_pin;
-	//uint16_t	dta_pin;
-	//uint16_t		rsv1;
 	uint8_t		SSD1306_Buffer[SSD1306_BUFFER_SIZE];
 } SSD1306_t;
+
+#define ssd1306_t SSD1306_t
 
 typedef struct {
     uint8_t x;

@@ -22,7 +22,9 @@ void swi2c_SWinit(swi2c_t *d, i2c_gpio_t *CLK, i2c_gpio_t *DATA) {
 }
 
 void swi2c_HWinit(swi2c_t *d, void *hWND) {
-	swi2c_SWinit(d, NULL, (i2c_gpio_t *)hWND);
+	//swi2c_SWinit(d, NULL, (i2c_gpio_t *)hWND);
+	if(!d) return;
+    __HAL_init_i2c__(d, NULL, (i2c_gpio_t*)hWND);
 }
 
 static void sda_out(swi2c_t *d, uint8_t out) {

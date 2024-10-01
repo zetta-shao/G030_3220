@@ -229,14 +229,14 @@ static void MX_GPIO_Init(void) {
 static void MX_NVIC_Init(void)
 {
   /* TIM3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(TIM3_IRQn);
+  //HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);
+  //HAL_NVIC_EnableIRQ(TIM3_IRQn);
   /* TIM14_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM14_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM14_IRQn);
   /* EXTI4_15_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
+  //HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
+  //HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 }
 
 

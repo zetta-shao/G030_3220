@@ -2,7 +2,7 @@
 #define __LCD1602SW__
 
 #define LCD_ADDRESS 0x27
-#define LCD_ADDRESS_8 (LCD_ADDRESS << 1)
+//#define LCD_ADDRESS_8 (LCD_ADDRESS << 1)
 #define LCD_BACKLIGHT	0x8
 
 typedef union { //0x01

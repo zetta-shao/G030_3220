@@ -179,13 +179,13 @@ void SSD1306_init(struct tSSD1306 *d, void *pvport, void *pvFontDef) {
 	d->pDev	= (swspi_t*)pvport;
 #endif
     d->d.flags = (FONTDRAW_HEIGHTMUL | FONTDRAW_HEIGHTPREDIV | FONTDRAW_VERTICALDRAW);
-    d->d.frameWidth = 128;
-    d->d.frameHeight = 64;
+    d->d.frameWidth = SSD1306_WIDTH;
+    d->d.frameHeight = SSD1306_HEIGHT;
     d->d.heightScale = 4; //2^4 = 128(weight)/8
     d->d.widthScale = 0;
     d->d.posmask = 7;
     d->d.invposmask = 0;
-    d->d.oneLineOffsetSize = 16;
+    d->d.oneLineOffsetSize = SSD1306_WIDTH;
     d->d.pFrameBuf = d->SSD1306_Buffer;
     if(pvFontDef) d->d.pFont = (struct FontDef*)pvFontDef;
     d->d.color = 1;
@@ -194,7 +194,8 @@ void SSD1306_init(struct tSSD1306 *d, void *pvport, void *pvFontDef) {
     // Reset OLED
     ssd1306_Reset(d);
     // Wait for the screen to boot
-    HAL_Delay(100);
+    //HAL_Delay(100);
+    swspi_delay_ms(100);
     // Init OLED
     ssd1306_SetDisplayOn(d, 0); //display off
     ssd1306_WriteCommand(d, 0x20); //Set Memory Addressing Mode
@@ -228,7 +229,7 @@ void SSD1306_init(struct tSSD1306 *d, void *pvport, void *pvFontDef) {
 #endif
 
 // Set multiplex ratio.
-#if (SSD1306_HEIGHT == 128)
+#if (SSD1306_HEIGHT >= 128)
     // Found in the Luma Python lib for SH1106.
     ssd1306_WriteCommand(d, 0xFF);
 #else
@@ -274,7 +275,8 @@ void SSD1306_init(struct tSSD1306 *d, void *pvport, void *pvFontDef) {
     ssd1306_Fill(d, Black);
     
     // Flush buffer to screen
-    ssd1306_UpdateScreen(d);
+    //ssd1306_UpdateScreen(d);
+    ssd1306_update(d);
     
     // Set default values for screen object
     d->d.curX = 0;
@@ -381,13 +383,12 @@ void ssd1306_UpdateScreen(struct tSSD1306 *d) {
 void ssd1306_update(lcddev_t *d) {
 	SSD1306_t *p = d->parent;
 	uint8_t *pT = d->pFrameBuf;
-    for(uint8_t i = 0; i < d->frameWidth/8; i++) {
+    for(uint8_t i = 0; i < d->frameHeight/8; i++) {
         ssd1306_WriteCommand(p, 0xB0 + i); // Set the current RAM page address.
         ssd1306_WriteCommand(p, 0x00 + SSD1306_X_OFFSET_LOWER);
         ssd1306_WriteCommand(p, 0x10 + SSD1306_X_OFFSET_UPPER);
-        //ssd1306_WriteData(d, d->SSD1306_Buffer + (SSD1306_WIDTH*i), SSD1306_WIDTH);
         ssd1306_WriteData(p, pT, d->frameWidth);
-        pT += d->oneLineOffsetSize;
+        pT += SSD1306_WIDTH;
     }
 }
 
