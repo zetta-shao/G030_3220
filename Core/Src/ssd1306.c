@@ -276,7 +276,7 @@ void SSD1306_init(struct tSSD1306 *d, void *pvport, void *pvFontDef) {
     
     // Flush buffer to screen
     //ssd1306_UpdateScreen(d);
-    ssd1306_update(d);
+    ssd1306_update(&d->d);
     
     // Set default values for screen object
     d->d.curX = 0;

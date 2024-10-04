@@ -12,6 +12,9 @@
 #include "lcd1602sw.h"
 #include "st7920.h"
 
+#define LCD_ST7920
+//#define LCD_SSD1306
+
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c2;
 SPI_HandleTypeDef hspi1;
@@ -28,9 +31,12 @@ swi2c_t si2c1={0}, si2c2={0};
 swspi_t sspi1={0};
 //swspi_t sspi2={0};
 //swspi_t sspi3={0};
-INA3221_t ina3221 = { 0 };
-//st7920_t lcd128 = { 0 };
+ina3221_t ina3221 = { 0 };
+#ifdef LCD_ST7920
+st7920_t lcd128 = { 0 };
+#elif defined(LCD_SSD1306)
 ssd1306_t lcd128 = { 0 };
+#endif
 stm32_gpio_t lcd_cs = { GPIOA, GPIO_PIN_4 }; //11
 stm32_gpio_t lcd_rs = { GPIOA, GPIO_PIN_6 }; //13
 //stm32_gpio_t lcd_mosi = { GPIOA, GPIO_PIN_1 }; //8
@@ -45,7 +51,7 @@ void assert_failed(uint8_t *file, uint32_t line) { }
 
 __strfmt str_fmt = &str_3digitL;
 
-void update_ina3221(INA3221_t *ina, void *display) {
+void update_ina3221(ina3221_t *ina, void *display) {
 	int8_t np;
 	int32_t p, i;
 	char str[64];
@@ -79,8 +85,8 @@ void update_ina3221(INA3221_t *ina, void *display) {
 	}
 	d->update(d);
 }
-#define ADV_VREF_PREAMP (4096 * 1210)
-#define ADV_VREF_PREAMP (4096 * 1210)
+
+#define ADV_VREF_PREAMP (4096 * 1200) //(4096 * 1210)
 
 void init_adc(ADC_HandleTypeDef *d) {
 	uint32_t idx, res = 0;
@@ -93,7 +99,7 @@ void init_adc(ADC_HandleTypeDef *d) {
 
 	HAL_ADC_Start(d);
 	for(idx=0; idx<4; idx++) {
-		HAL_ADC_PollForConversion(d, 1); //wsit for 1mS
+		HAL_ADC_PollForConversion(d, 1); //wait for 1mS
 		res += HAL_ADC_GetValue(d);
 	}
 	HAL_ADC_Stop(d);
@@ -121,40 +127,56 @@ void update_adc(ADC_HandleTypeDef *d, lcddev_t *plcd) {
 	fontdraw_string(plcd, str);
 }
 
+void disp_title(lcddev_t *plcd) {
+	fontdraw_setpos(plcd, 0, 0);
+	fontdraw_string(plcd, "ch  ");
+	fontdraw_setpos(plcd, 24, 0);
+	fontdraw_string(plcd, "Vol    ");
+	fontdraw_setpos(plcd, 64, 0);
+	fontdraw_string(plcd, "Cur    ");
+	fontdraw_setpos(plcd, 104, 0);
+	fontdraw_string(plcd, "Wat ");
+}
+
 int main(void) {
 	lcddev_t *plcd;
 	HAL_Init();
 	GPIOinit();
-	swi2c_HWinit(&si2c1, &hi2c1);
-	//swi2c_HWinit(&si2c2, &hi2c2);
+	swi2c_HWinit(&si2c1, &hi2c2);
+	//{
+	//	i2c_gpio_t clk={ SI2C1P, SI2C1L }, sda={ SI2C1P, SI2C1A };
+	//	swi2c_SWinit(&si2c1, &clk, &sda);
+	//}
 	swspi_HWinit(&sspi1, &hspi1);
 	//swspi_SWinit(&sspi2, &lcd_clk, &lcd_mosi, NULL);
 	//swspi_setmode(&sspi1, 3);
 
 	HAL_Delay(50);
 	init_adc(&hadc1);
-	ina3221_begin(&ina3221, &si2c1);
+	ina3221_init(&ina3221, &si2c1);
 	HAL_ADCEx_Calibration_Start(&hadc1);
 
-	//st7920_init(&lcd128, &sspi1, NULL, &Font_6x8);
+#if defined(LCD_ST7920)
+	st7920_init(&lcd128, &sspi1, NULL, &Font_6x8);
+#elif defined(LCD_SSD1306)
 	SSD1306_gpioinit4W2(&lcd128, &lcd_cs, &lcd_rs);
 	SSD1306_init(&lcd128, &sspi1, &Font_6x8);
+#endif
 	plcd = &lcd128.d;
-	fontdraw_setpos(plcd, 0, 0);
-	fontdraw_string(plcd, "ch ");
-	fontdraw_setpos(plcd, 24, 0);
-	fontdraw_string(plcd, "Vol ");
-	fontdraw_setpos(plcd, 64, 0);
-	fontdraw_string(plcd, "Cur ");
-	fontdraw_setpos(plcd, 104, 0);
-	fontdraw_string(plcd, "Wat ");
-	//plcd->update(plcd);
+	disp_title(plcd);
 
   _val_ = 0;
   while (1) {
-	  update_ina3221(&ina3221, plcd);
-	  update_adc(&hadc1, plcd);
-	  HAL_Delay(500);
+		if(ina3221.pDev == NULL) {
+			if(ina3221_detect(&ina3221, &si2c1) != 0) {
+				ina3221_init(&ina3221, &si2c1);
+				disp_title(plcd);
+			}
+		}
+	update_ina3221(&ina3221, plcd); 
+
+	update_adc(&hadc1, plcd);
+	HAL_Delay(500);
   }
 }
 

@@ -20,25 +20,45 @@ static void enable_clock(void* GPIOport) {
 	}
 }
 #endif
+#define STM32_BLK_DELAY 0x10
+//#define STM32_USE_IRQ //IRQ/DMA mode
 
 void swi2c_delay_us(uint32_t us) { STM32_DELAY_US(us); }
-
 void swi2c_delay_ms(uint32_t ms) { STM32_DELAY_MS(ms); }
-
 static int hwi2c_transmit_mem_t(hwi2c_t *d) {
+  int res;
 	//if(HAL_I2C_IsDeviceReady((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), 2, 2) != HAL_OK) return 8;
-	if(d->devaddrsize == 0)
-		return (HAL_I2C_Master_Transmit((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->data, d->datasize, 0x100) == HAL_OK) ? 0 : 1;
-	else
-		return (HAL_I2C_Mem_Write((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->i2cmem_addr, d->devaddrsize, d->data, d->datasize, 0x100) == HAL_OK) ? 0 : 1;
+#ifdef STM32_USE_IRQ
+  if(d->devaddrsize == 0)
+    res = HAL_I2C_Master_Transmit_IT((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->data, d->datasize);
+  else
+    res = HAL_I2C_Mem_Write_IT((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->i2cmem_addr, d->devaddrsize, d->data, d->datasize);
+  swi2c_delay_ms(1);
+#else
+  if(d->devaddrsize == 0)
+    res = HAL_I2C_Master_Transmit((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->data, d->datasize, STM32_BLK_DELAY);
+  else
+    res = HAL_I2C_Mem_Write((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->i2cmem_addr, d->devaddrsize, d->data, d->datasize, STM32_BLK_DELAY);
+#endif
+  return res;
 }
 
 static int hwi2c_receive_mem_t(hwi2c_t *d) {
+  int res;
 	//if(HAL_I2C_IsDeviceReady((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), 2, 2) != HAL_OK) return 8;
-	if(d->devaddrsize == 0)
-		return (HAL_I2C_Master_Transmit((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->data, d->datasize, 0x100) == HAL_OK) ? 0 : 1;
-	else
-		return (HAL_I2C_Mem_Read((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->i2cmem_addr, d->devaddrsize, d->data, d->datasize, 0x100) == HAL_OK) ? 0 : 1;
+#ifdef STM32_USE_IRQ
+  if(d->devaddrsize == 0)
+    res = HAL_I2C_Master_Transmit_IT((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->data, d->datasize);
+  else
+    res = HAL_I2C_Mem_Read_IT((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->i2cmem_addr, d->devaddrsize, d->data, d->datasize);
+  swi2c_delay_ms(1);
+#else
+  if(d->devaddrsize == 0)
+    res= HAL_I2C_Master_Transmit((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->data, d->datasize, STM32_BLK_DELAY);
+  else
+    res = HAL_I2C_Mem_Read((I2C_HandleTypeDef *)d->hWND, (d->i2cdev_addr<<1), d->i2cmem_addr, d->devaddrsize, d->data, d->datasize, STM32_BLK_DELAY);
+#endif
+  return res;
 }
 
 static int swi2c_port_io_ctl(uint8_t opt, void *param);
@@ -105,8 +125,8 @@ static int swi2c_port_io_ctl(uint8_t opt, void *param) {
     case IOCTL_SWI2C_SET_GPIO_OUTPUT: GPIOmode_out_stm32((i2c_gpio_t*)param); break;
     case IOCTL_SWI2C_DELAY_US: swi2c_delay_us(*(uint32_t*)param); break;
     case IOCTL_SWI2C_DELAY_MS: swi2c_delay_ms(*(uint32_t*)param); break;
-    case IOCTL_SWI2C_HWI2C_READ: hwi2c_receive_mem_t((hwi2c_t*)param); break;
-    case IOCTL_SWI2C_HWI2C_WRITE: hwi2c_transmit_mem_t((hwi2c_t*)param); break;
+    case IOCTL_SWI2C_HWI2C_READ: ret = hwi2c_receive_mem_t((hwi2c_t*)param); break;
+    case IOCTL_SWI2C_HWI2C_WRITE: ret = hwi2c_transmit_mem_t((hwi2c_t*)param); break;
     default:
         break;
     }

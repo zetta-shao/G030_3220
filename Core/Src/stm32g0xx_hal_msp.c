@@ -113,6 +113,8 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c) {
     GPIO_InitStruct.Alternate = GPIO_AF6_I2C1;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
     __HAL_RCC_I2C1_CLK_ENABLE();
+    HAL_NVIC_SetPriority(I2C1_IRQn, 0, 0); //irq
+    HAL_NVIC_EnableIRQ(I2C1_IRQn); //irq
   } else if(hi2c->Instance==I2C2) {
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**I2C2 GPIO Configuration
@@ -126,6 +128,8 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c) {
     GPIO_InitStruct.Alternate = GPIO_AF6_I2C2;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
     __HAL_RCC_I2C2_CLK_ENABLE();
+    HAL_NVIC_SetPriority(I2C2_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(I2C2_IRQn);
   }
 }
 
