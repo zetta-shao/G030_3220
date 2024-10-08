@@ -15,7 +15,7 @@ void st7920_set_rs(st7920_t *d, uint8_t val) { (void)d; (void)val; } //enable, a
 //void st7920_set_sclk(st7920_t *d, uint8_t val) { (void)d; (void)val; }
 //void st7920_set_sid(st7920_t *d, uint8_t val) { (void)d; (void)val; }
 
-void st7920_init(st7920_t *d, swspi_t *spi, spi_gpio_t *rs, void *pvFontDef) {
+void st7920_init(st7920_t *d, swspi_t *spi, swgpio_t *rs, void *pvFontDef) {
     if(spi) d->pDev = spi; else d->pDev = NULL;
     if(rs) d->rs = rs; else d->rs = NULL;
     //if(psb) d->psb = psb; else d->psb = NULL;

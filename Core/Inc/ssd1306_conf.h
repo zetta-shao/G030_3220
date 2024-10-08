@@ -18,7 +18,7 @@
 //#define STM32F3
 //#define STM32H7
 //#define STM32F7
-#define STM32G0
+//#define STM32G0
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,12 +50,11 @@ extern "C" {
 
 // Include only needed fonts
 //#define SSD1306_INCLUDE_FONT_5x7
-#define SSD1306_INCLUDE_FONT_5x8
+#define SSD1306_INCLUDE_FONT_6x8
 //#define SSD1306_INCLUDE_FONT16_6x8
 //#define SSD1306_INCLUDE_FONT_7x10
 //#define SSD1306_INCLUDE_FONT_11x18
 //#define SSD1306_INCLUDE_FONT_16x26
-
 //#define SSD1306_INCLUDE_FONT_16x24
 
 // The width of the screen can be set using this
@@ -65,7 +64,7 @@ extern "C" {
 // If your screen horizontal axis does not start
 // in column 0 you can use this define to
 // adjust the horizontal offset
-#define SSD1306_X_OFFSET 2 //for SH1106 only
+// #define SSD1306_X_OFFSET
 
 // The height can be changed as well if necessary.
 // It can be 32, 64 or 128. The default value is 64.

@@ -46,7 +46,7 @@ typedef struct st7920_t st7920_t;
 struct st7920_t {
     lcddev_t    d;
     swspi_t     *pDev;
-    spi_gpio_t    *rs; //en
+    swgpio_t    *rs; //en
     uint8_t        buf[1024]; //for 128x64 pixel
 };
 
@@ -58,14 +58,14 @@ struct st7920_t {
     uint32_t    flag : 11;
     } __attribute__((packed));
     swspi_t     *pDev;
-    //spi_gpio_t    *psb;
-    spi_gpio_t    *rs; //en
-    //spi_gpio_t    *clk; //clk
-    //spi_gpio_t    *sid; //mosi
+    //swgpio_t    *psb;
+    swgpio_t    *rs; //en
+    //swgpio_t    *clk; //clk
+    //swgpio_t    *sid; //mosi
     uint8_t        buf[1024]; //for 128x64 pixel
 } st7920_t;*/
 
-void st7920_init(st7920_t *d, swspi_t *spi, spi_gpio_t *rs, void *pvFontDef);
+void st7920_init(st7920_t *d, swspi_t *spi, swgpio_t *rs, void *pvFontDef);
 void st7920_cmd(st7920_t *d, uint8_t Cbyte);
 void st7920_data(st7920_t *d, uint8_t Dbyte );
 void st7920_cursor(st7920_t *d, uint8_t x, uint8_t y);
@@ -77,9 +77,9 @@ char st7920_WriteChar2(st7920_t *d, uint8_t ch, FontDef *font, uint8_t color);
 void st7920_DrawPixel(st7920_t *d, uint8_t x, uint8_t y, uint8_t color);
 void st7920_strin2(st7920_t *d, char *s, FontDef *font, uint8_t color);
 /*
- * spi_gpio_t gpios[4] { sid, sclk, rs, psb }
+ * swgpio_t gpios[4] { sid, sclk, rs, psb }
  */
-void st7920_init_w_gpio(st7920_t *d, int gpios, spi_gpio_t *gpioary);
+void st7920_init_w_gpio(st7920_t *d, int gpios, swgpio_t *gpioary);
 
 #endif
 

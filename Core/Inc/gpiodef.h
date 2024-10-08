@@ -7,8 +7,33 @@
 
 #ifndef INC_GPIODEF_H_
 #define INC_GPIODEF_H_
-#include "stm32g0xx_hal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef _M_AMD64
+#include <stdint.h>
+void HAL_Delay(uint32_t mS);
+typedef struct swgpio_t swgpio_t;
+struct swgpio_t {
+        void    *port;
+        uint16_t pin;
+};
+#else
+	#define STM32
+#endif
+
+#ifdef STM32
+#include "stm32g0xx_hal.h"
+typedef struct swgpio_t swgpio_t;
+struct swgpio_t {
+        void    *port;
+        uint16_t pin;
+};
+#endif
+
+#ifdef STM32
 #define HI2C1L		GPIO_PIN_8	//1
 #define HI2C1A		GPIO_PIN_9	//2
 #define HI2C1P		GPIOB
@@ -63,10 +88,6 @@
 #define	DEV_SW35183		(1 << 6)
 #define	DEV_SW35184		(1 << 7)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
 extern SPI_HandleTypeDef hspi1;
@@ -80,11 +101,6 @@ void Error_Handler(void);
 void GPIOinit(void);
 void SI2cInit_stm32(void *pvswI2Ct, void* dwSDAport, void* swSCLport, uint8_t bSDApin, uint8_t bSCLpin);
 
-typedef struct t_stm32_gpio {
-	void	*port;
-	uint16_t pin;
-} stm32_gpio_t;
-
 #define STM32_SYSTICK_LOAD (SystemCoreClock/1000000U)
 #define STM32_SYSTICK_DELAY_CALIB (STM32_SYSTICK_LOAD >> 1)
  
@@ -96,7 +112,7 @@ typedef struct t_stm32_gpio {
     } while (0)
 
 #define STM32_DELAY_MS(ms) HAL_Delay(ms)
-
+#endif
 #ifdef __cplusplus
 }
 #endif

@@ -1,5 +1,5 @@
 #include "ssd1306.h"
-#include <math.h>
+//#include <math.h>
 #include <stdlib.h>
 #include <string.h>  // For memcpy
 
@@ -346,7 +346,7 @@ void SH1106_Init(struct tSSD1306 *d, void *pvport) {
     // Clear screen
     ssd1306_Fill(d, Black);
     // Flush buffer to screen
-    ssd1306_UpdateScreen(d);
+    ssd1306_update(&d->d);
     // Set default values for screen object
     d->d.curX = 0;
     d->d.curY = 0;
@@ -361,26 +361,13 @@ void ssd1306_Fill(struct tSSD1306 *d, SSD1306_COLOR color) {
     memset(d->SSD1306_Buffer, ((color == Black) ? 0x00 : 0xFF), SSD1306_BUFFER_SIZE);
 }
 
-/* Write the screenbuffer with changed to the screen */
-void ssd1306_UpdateScreen(struct tSSD1306 *d) {
+void ssd1306_update(lcddev_t *d) {
     // Write data to each page of RAM. Number of pages
     // depends on the screen height:
     //
     //  * 32px   ==  4 pages
     //  * 64px   ==  8 pages
     //  * 128px  ==  16 pages
-	uint8_t *pT = d->SSD1306_Buffer;
-    for(uint8_t i = 0; i < SSD1306_HEIGHT/8; i++) {
-        ssd1306_WriteCommand(d, 0xB0 + i); // Set the current RAM page address.
-        ssd1306_WriteCommand(d, 0x00 + SSD1306_X_OFFSET_LOWER);
-        ssd1306_WriteCommand(d, 0x10 + SSD1306_X_OFFSET_UPPER);
-        //ssd1306_WriteData(d, d->SSD1306_Buffer + (SSD1306_WIDTH*i), SSD1306_WIDTH);
-        ssd1306_WriteData(d, pT, SSD1306_WIDTH);
-        pT += SSD1306_WIDTH;
-    }
-}
-
-void ssd1306_update(lcddev_t *d) {
 	SSD1306_t *p = d->parent;
 	uint8_t *pT = d->pFrameBuf;
     for(uint8_t i = 0; i < d->frameHeight/8; i++) {
@@ -391,7 +378,7 @@ void ssd1306_update(lcddev_t *d) {
         pT += SSD1306_WIDTH;
     }
 }
-
+#if 0
 /*
  * Draw one pixel in the screenbuffer
  * X => X Coordinate
@@ -766,7 +753,7 @@ void ssd1306_DrawBitmap(struct tSSD1306 *d, uint8_t x, uint8_t y, const unsigned
     }
     return;
 }
-
+#endif
 void ssd1306_SetContrast(struct tSSD1306 *d, const uint8_t value) {
     const uint8_t kSetContrastControlRegister = 0x81;
     ssd1306_WriteCommand(d, kSetContrastControlRegister);

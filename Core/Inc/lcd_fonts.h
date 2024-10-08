@@ -41,6 +41,9 @@ extern FontDef Font_7x10;
 #ifdef LCDFONT_INCLUDE_FONT_8x16
 extern FontDef Font_8x16;
 #endif
+#ifdef LCDFONT_INCLUDE_FONT_6x8_16
+extern FontDef Font_6x8_16;
+#endif
 #ifdef LCDFONT_INCLUDE_FONT_11x18
 extern FontDef Font_11x18;
 #endif

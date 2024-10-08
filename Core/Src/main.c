@@ -37,10 +37,10 @@ st7920_t lcd128 = { 0 };
 #elif defined(LCD_SSD1306)
 ssd1306_t lcd128 = { 0 };
 #endif
-stm32_gpio_t lcd_cs = { GPIOA, GPIO_PIN_4 }; //11
-stm32_gpio_t lcd_rs = { GPIOA, GPIO_PIN_6 }; //13
-//stm32_gpio_t lcd_mosi = { GPIOA, GPIO_PIN_1 }; //8
-//stm32_gpio_t lcd_clk = { GPIOA, GPIO_PIN_2 }; //9
+swgpio_t lcd_cs = { GPIOA, GPIO_PIN_4 }; //11
+swgpio_t lcd_rs = { GPIOA, GPIO_PIN_6 }; //13
+//swgpio_t lcd_mosi = { GPIOA, GPIO_PIN_1 }; //8
+//swgpio_t lcd_clk = { GPIOA, GPIO_PIN_2 }; //9
 int32_t wV[3], wI[3];
 
 #define deffont Font_5x8
@@ -144,7 +144,7 @@ int main(void) {
 	GPIOinit();
 	swi2c_HWinit(&si2c1, &hi2c2);
 	//{
-	//	i2c_gpio_t clk={ SI2C1P, SI2C1L }, sda={ SI2C1P, SI2C1A };
+	//	swgpio_t clk={ SI2C1P, SI2C1L }, sda={ SI2C1P, SI2C1A };
 	//	swi2c_SWinit(&si2c1, &clk, &sda);
 	//}
 	swspi_HWinit(&sspi1, &hspi1);

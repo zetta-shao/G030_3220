@@ -30,7 +30,7 @@
     if(pvFontDef) d->pFont = (struct FontDef*)pvFontDef;
 }*/
 
-void fontdraw_driwpixelBW(fontdraw_t *d, uint32_t x, uint32_t y, int color) {
+void fontdraw_drawpixelBW(fontdraw_t *d, uint32_t x, uint32_t y, int color) {
     int ox = (x & d->posmask) ^ d->invposmask;
     int oy = (y & d->posmask) ^ d->invposmask;
     //if(d->flags & FONTDRAW_WIDTHPREDIV) x >>= d->widthprediv;
@@ -65,14 +65,14 @@ char fontdraw_charFont(fontdraw_t *d, uint8_t ch, int color, void *pvFontDef) {
             px = (uint16_t*)font->data + ((ch-32)*font->FontWidth);
             for(i = 0; i < font->FontWidth; i++) {
                 for(m=0x8000,j=0; j<font->FontHeight; j++, m>>=1) {
-                    fontdraw_driwpixelBW(d, posx + j, (posy + i), (px[i] & m) ? color : !color);
+                    fontdraw_drawpixelBW(d, posx + j, (posy + i), (px[i] & m) ? color : !color);
                 }
             }
         } else {
             px = (uint16_t*)font->data + ((ch-32)*font->FontHeight);
             for(i = 0; i < font->FontHeight; i++) {
                 for(m=0x8000,j=0; j<font->FontWidth; j++, m>>=1) {
-                    fontdraw_driwpixelBW(d, posx + j, (posy + i), (px[i] & m) ? color : !color);
+                    fontdraw_drawpixelBW(d, posx + j, (posy + i), (px[i] & m) ? color : !color);
                 }
             }
         }
@@ -84,7 +84,7 @@ char fontdraw_charFont(fontdraw_t *d, uint8_t ch, int color, void *pvFontDef) {
             else px += (ch - 32) * font->FontWidth;
             for(i = 0; i < font->FontWidth; i++) {
                 for(m=0x80,j=0; j<font->FontHeight; j++, m>>=1) {
-                    fontdraw_driwpixelBW(d, posx + i, (posy + j), (px[i] & m) ? color : !color);
+                    fontdraw_drawpixelBW(d, posx + i, (posy + j), (px[i] & m) ? color : !color);
                 }
             }
         } else {
@@ -93,7 +93,7 @@ char fontdraw_charFont(fontdraw_t *d, uint8_t ch, int color, void *pvFontDef) {
             else px += (ch - 32) * font->FontHeight;
             for(i = 0; i < font->FontHeight; i++) {
                 for(m=0x80,j=0; j<font->FontWidth; j++, m>>=1) {
-                    fontdraw_driwpixelBW(d, posx + j, (posy + i), (px[i] & m) ? color : !color);
+                    fontdraw_drawpixelBW(d, posx + j, (posy + i), (px[i] & m) ? color : !color);
                 }
             }
         }

@@ -127,11 +127,11 @@ void ina3221_setFilterRes(ina3221_t *d, uint32_t res_ch1, uint32_t res_ch2,
 	d->_filterRes[2] = res_ch3;
 }
 
-uint16_t ina3221_getReg(ina3221_t *d, uint16_t reg) {
+/*uint16_t ina3221_getReg(ina3221_t *d, uint16_t reg) {
     uint16_t val = 0;
     ina3221_read(d, reg, &val);
     return val;
-}
+}*/
 
 void ina3221_reset(ina3221_t *d) {
 	conf_reg_t CR;

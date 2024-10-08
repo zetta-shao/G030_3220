@@ -1,5 +1,8 @@
 #ifndef _INA3221_H_
 #define _INA3221_H_
+#ifdef __cplusplus
+extern "C" {
+#endif
 //#include "Arduino.h"
 //#include "Wire.h"
 #include "swi2c.h"
@@ -358,4 +361,7 @@ struct ina3221_t {
 #endif
 	int32_t ina3221_getCurPower(ina3221_t *d, uint8_t channel);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
